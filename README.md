@@ -292,3 +292,17 @@ O esqueleto não determina sua hierarquia de classes.
 - Biblioteca JSON C++ ausente: documente sua escolha e instalação no README e CI.
 
 Consulte [o contrato completo](docs/CONTRATO.md) antes de alterar a comunicação.
+## Dependência C++
+
+O controlador utiliza a biblioteca nlohmann/json para leitura,
+validação e manipulação dos arquivos JSON.
+
+No Ubuntu, instale com:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y nlohmann-json3-dev
+```
+
+A biblioteca também é instalada automaticamente no GitHub Actions
+durante a execução dos testes.
