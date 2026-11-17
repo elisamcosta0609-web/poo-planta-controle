@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <utility>
 
 bool Aquisicao::carregar(const std::string& caminho,
                          nlohmann::json& dados,
@@ -13,14 +14,21 @@ bool Aquisicao::carregar(const std::string& caminho,
         return false;
     }
 
+    nlohmann::json temporario;
+
     try {
-        arquivo >> dados;
+        arquivo >> temporario;
     } catch (const nlohmann::json::exception&) {
         erro = "Arquivo JSON invalido.";
         return false;
     }
 
-    return validar(dados, erro);
+    if (!validar(temporario, erro)) {
+        return false;
+    }
+
+    dados = std::move(temporario);
+    return true;
 }
 
 bool Aquisicao::validar(const nlohmann::json& dados,
@@ -74,16 +82,32 @@ bool Aquisicao::validar(const nlohmann::json& dados,
             !leitura["unidade"].is_string() ||
             !leitura.contains("status") ||
             !leitura["status"].is_string() ||
-            !leitura.contains("valor") ||
-            !leitura["valor"].is_number()) {
+            !leitura.contains("valor")) {
             erro = "Uma leitura possui campos invalidos.";
             return false;
         }
 
-        double valor = leitura["valor"].get<double>();
+        std::string status = leitura["status"].get<std::string>();
 
-        if (!std::isfinite(valor) || valor < 0 || valor > 100) {
-            erro = "Valor de leitura fora dos limites.";
+        if (status == "falha") {
+            if (!leitura["valor"].is_null()) {
+                erro = "Leitura com falha deve possuir valor nulo.";
+                return false;
+            }
+        } else if (status == "operando") {
+            if (!leitura["valor"].is_number()) {
+                erro = "Leitura em operacao precisa possuir valor numerico.";
+                return false;
+            }
+
+            double valor = leitura["valor"].get<double>();
+
+            if (!std::isfinite(valor) || valor < 0 || valor > 100) {
+                erro = "Valor de leitura fora dos limites.";
+                return false;
+            }
+        } else {
+            erro = "Status de leitura invalido.";
             return false;
         }
     }
