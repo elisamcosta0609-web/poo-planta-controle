@@ -1,3 +1,5 @@
+
+#include "include/alarmes.hpp"
 #include "aquisicao.hpp"
 #include "include/estado.hpp"
 #include "include/politica_controle.hpp"
@@ -69,6 +71,7 @@ int main(int argc, char* argv[]) {
     Aquisicao aquisicao;
     Estado estado;
     PoliticaControle politica;
+    Alarmes alarmes;
 
     json dados;
     std::string erro;
@@ -184,7 +187,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (estado.tem_pendente) {
+     if (estado.tem_pendente) {
         json comando = {
             {"versao", 1},
             {"sessao", sessao},
@@ -201,7 +204,39 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    dados["alarmes"] = json::array();
+    double nivel_alarme = 0.0;
+    double temperatura_alarme = 0.0;
+
+    bool nivel_disponivel = false;
+    bool temperatura_disponivel = false;
+
+    for (const auto& leitura : dados["leituras"]) {
+        std::string tipo = leitura.at("tipo").get<std::string>();
+        std::string status = leitura.at("status").get<std::string>();
+
+        if (tipo == "nivel") {
+            nivel_disponivel =
+                status == "operando" && !leitura.at("valor").is_null();
+
+            if (nivel_disponivel) {
+                nivel_alarme = leitura.at("valor").get<double>();
+            }
+        } else if (tipo == "temperatura") {
+            temperatura_disponivel =
+                status == "operando" && !leitura.at("valor").is_null();
+
+            if (temperatura_disponivel) {
+                temperatura_alarme = leitura.at("valor").get<double>();
+            }
+        }
+    }
+
+    dados["alarmes"] = alarmes.avaliar(
+        nivel_disponivel,
+        nivel_alarme,
+        temperatura_disponivel,
+        temperatura_alarme
+    );
 
     if (!gravar_json(caminho_telemetria, dados)) {
         std::cerr << "Erro ao publicar a telemetria.\n";
