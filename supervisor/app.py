@@ -7,6 +7,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from supervisor.repositorio_telemetria import RepositorioTelemetria
+
 
 def main():
     dados = Path(os.environ.get("POO_DADOS", "dados"))
@@ -15,9 +17,10 @@ def main():
     st.title("Supervisório da planta didática")
     st.caption(f"Diretório de integração: {dados}")
 
+    repositorio = RepositorioTelemetria(caminho)
+
     try:
-        with caminho.open("r", encoding="utf-8") as arquivo:
-            telemetria = json.load(arquivo)
+        telemetria = repositorio.carregar()
 
     except FileNotFoundError:
         st.warning("Arquivo de telemetria não encontrado.")
@@ -27,19 +30,15 @@ def main():
         st.error("Arquivo de telemetria contém JSON inválido.")
         return
 
+    except ValueError as erro:
+        st.error(str(erro))
+        return
+
     except OSError as erro:
         st.error(f"Erro ao ler telemetria: {erro}")
         return
 
-    if not isinstance(telemetria, dict):
-        st.error("Formato de telemetria inválido.")
-        return
-
     leituras = telemetria.get("leituras", [])
-
-    if not isinstance(leituras, list):
-        st.error("Formato das leituras inválido.")
-        return
 
     st.subheader("Leituras dos sensores")
 
